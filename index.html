@@ -77,7 +77,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--acc)}
 <script>
 const $=s=>document.querySelector(s);
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const CATS={power:'Power / dead machine',video:'Video / picture',sound:'Sound',controls:'Controls',coin:'Coin / credits',board:'Board level',mech:'Mechanical failure / physical damage'};
+const CATS={power:'Power / dead machine',video:'Video / picture',sound:'Sound',controls:'Controls',coin:'Coin / credits',board:'Board level',mech:'Mechanical failure / physical damage',soft:'Error code / software failure'};
 const CL={
 power:['Mains socket, fuse and IEC inlet OK','PSU +5V within 5.0–5.1V','PSU +12V present','Door interlock switch OK','No bulging caps / failed rectifier'],
 video:['Video cable and connector pins OK','Monitor tested with known-good source','Board boots (LEDs / sound / counter)','Sync present and correct polarity','Monitor chassis caps checked'],
@@ -85,7 +85,8 @@ sound:['Speaker connected and working','Volume pot OK','Amp supply voltage corre
 controls:['Switch continuity tested','Harness free of broken wires','Service menu input test passed','Microswitches / actuators not worn'],
 coin:['Coin mech clean, coin path clear','Coin switch / opto sensor OK','Coin door wiring to board OK','Pricing settings (DIP / menu) correct'],
 board:['Chips reseated, contacts cleaned','Solder joints reflowed','RAM / ROM tested','Leaking electrolytics checked','Battery leakage checked'],
-mech:['Cabinet, panels and side art free of damage','Moving parts, gears, belts and motors move freely','Fixings, hinges and locks secure','Buttons, joystick and trackball not broken or loose','Glass, bezel and marquee intact','Vandalism, spill or impact damage recorded']};
+mech:['Cabinet, panels and side art free of damage','Moving parts, gears, belts and motors move freely','Fixings, hinges and locks secure','Buttons, joystick and trackball not broken or loose','Glass, bezel and marquee intact','Vandalism, spill or impact damage recorded'],
+soft:['Error code or message recorded (note it below)','Machine power-cycled and fault retested','Game settings / operator menu checked','Software, firmware or game version verified','Network / server connection and logs checked','Config or game data restored or reflashed if needed']};
 let db,sel=new Set(),cur={};
 function day(o){const d=new Date();d.setDate(d.getDate()-o);return d.toISOString().slice(0,10)}
 function seed(){
