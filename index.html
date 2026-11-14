@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Arcade Technician Diagnostic System</title>
+<style>
+:root{--bg:#0b0f14;--panel:#121923;--panel2:#18212e;--line:#223044;--tx:#d7e0ea;--mut:#7d8ca0;--acc:#27d3c3;--ok:#3ecf8e;--bad:#ff5d6c;--warn:#f5b53d;color-scheme:dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:12px 20px;background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:env(safe-area-inset-top,0px);z-index:5}
+.logo{font-weight:700;letter-spacing:.5px;display:flex;align-items:center;gap:8px}
+.logo i{width:10px;height:10px;border-radius:50%;background:var(--acc);box-shadow:0 0 10px var(--acc)}
+.logo small{color:var(--mut);font-weight:400;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px}
+nav{display:flex;gap:4px;margin-left:auto}
+nav button{background:none;border:1px solid transparent;color:var(--mut);padding:7px 14px;border-radius:6px;cursor:pointer;font:inherit}
+nav button.on{color:var(--acc);border-color:var(--line);background:var(--panel2)}
+main{max-width:1180px;margin:0 auto;padding:20px}
+h2{margin:0 0 14px;font-size:18px}
+h3{margin:0 0 10px;font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--mut);font-weight:600}
+.grid{display:grid;gap:14px}
+.k{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
+.two{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px}
+.kpi b{display:block;font-size:30px;font-family:ui-monospace,Menlo,Consolas,monospace;margin-top:4px}
+.bar{display:grid;grid-template-columns:130px 1fr 28px;gap:8px;align-items:center;margin:7px 0;font-size:13px}
+.bar div{height:8px;background:var(--panel2);border-radius:4px;overflow:hidden}
+.bar div i{display:block;height:100%;background:linear-gradient(90deg,#1b8f86,var(--acc))}
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{color:var(--mut);font-size:11px;text-transform:uppercase;letter-spacing:.8px}
+tr:hover td{background:var(--panel2)}
+.tag{padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;border:1px solid}
+.Resolved,.Low{color:var(--ok)}.Open,.Critical{color:var(--bad)}.Parts,.Medium,.High{color:var(--warn)}
+.f{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+label{display:block;color:var(--mut);font-size:12px;margin-bottom:4px}
+input,select,textarea{width:100%;background:var(--bg);color:var(--tx);border:1px solid var(--line);border-radius:6px;padding:8px 10px;font:inherit}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--acc)}
+.btn{background:var(--acc);color:#04201d;border:0;border-radius:6px;padding:9px 16px;font:inherit;font-weight:600;cursor:pointer}
+.btn.s{background:var(--panel2);color:var(--tx);border:1px solid var(--line)}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin-top:14px}
+.chk{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
+.seg{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{background:var(--bg);color:var(--mut);border:0;padding:6px 12px;cursor:pointer;font:inherit;font-size:12px}
+.seg button.pass{background:var(--ok);color:#04200f}.seg button.fail{background:var(--bad);color:#2b0309}.seg button.na{background:var(--line);color:var(--tx)}
+.mode{display:flex;gap:8px}.mode button{flex:1}
+#toast{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);background:var(--acc);color:#04201d;padding:10px 18px;border-radius:8px;font-weight:600;display:none;z-index:9;max-width:90%}
+.hide{display:none}
+#pa{display:none}
+.sheet{color:#000;background:#fff;padding:20px;border:1px solid #999;margin-bottom:16px;page-break-inside:avoid;font-family:Arial,sans-serif}
+.sheet h1{font-size:18px;margin:0 0 8px}.sheet td,.sheet th{color:#000;border-bottom:1px solid #ccc;white-space:normal}
+@media print{body>*{display:none!important}#pa{display:block!important}.sheet{border:0}}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo"><i></i>ARCADE DIAGNOSTIC SYSTEM <small>v1.0 · OFFLINE</small></div>
+  <nav>
+    <button data-v="dash" class="on">Dashboard</button>
+    <button data-v="new">New Diagnostic</button>
+    <button data-v="rep">Reports</button>
+    <button data-v="reg">Registers</button>
+    <button data-v="dat">Data</button>
+  </nav>
+</header>
+<main>
+  <section id="dash"></section>
+  <section id="new" class="hide"></section>
+  <section id="rep" class="hide"></section>
+  <section id="reg" class="hide"></section>
+  <section id="dat" class="hide"></section>
+</main>
+<div id="pa"></div>
+<div id="toast"></div>
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const CATS={power:'Power / dead machine',video:'Video / picture',sound:'Sound',controls:'Controls',coin:'Coin / credits',board:'Board level',mech:'Mechanical failure / physical damage'};
+const CL={
+power:['Mains socket, fuse and IEC inlet OK','PSU +5V within 5.0–5.1V','PSU +12V present','Door interlock switch OK','No bulging caps / failed rectifier'],
+video:['Video cable and connector pins OK','Monitor tested with known-good source','Board boots (LEDs / sound / counter)','Sync present and correct polarity','Monitor chassis caps checked'],
+sound:['Speaker connected and working','Volume pot OK','Amp supply voltage correct','Board sound output present'],
+controls:['Switch continuity tested','Harness free of broken wires','Service menu input test passed','Microswitches / actuators not worn'],
+coin:['Coin mech clean, coin path clear','Coin switch / opto sensor OK','Coin door wiring to board OK','Pricing settings (DIP / menu) correct'],
+board:['Chips reseated, contacts cleaned','Solder joints reflowed','RAM / ROM tested','Leaking electrolytics checked','Battery leakage checked'],
+mech:['Cabinet, panels and side art free of damage','Moving parts, gears, belts and motors move freely','Fixings, hinges and locks secure','Buttons, joystick and trackball not broken or loose','Glass, bezel and marquee intact','Vandalism, spill or impact damage recorded']};
+let db,sel=new Set(),cur={};
+function day(o){const d=new Date();d.setDate(d.getDate()-o);return d.toISOString().slice(0,10)}
+function seed(){
+  const T=['A. Patel','J. Moreno','S. Okafor','L. Nguyen'],L=['Seaside Arcade','Metro Mall FEC','Northgate Bowl','Airport Lounge'];
+  const M=['Pac-Man Cabinet','Initial D Racer','Time Crisis 5','Claw Crane 3','Air Hockey Pro','Dance Rush Stage','Skee-Ball Lane 4','JAMMA Upright'];
+  const K=Object.keys(CATS),S=['Low','Medium','High','Critical'],ST=['Resolved','Resolved','Resolved','Open','Parts'];
+  const N=['Replaced worn microswitches; tested OK.','Recapped monitor chassis; picture restored.','Waiting on replacement PSU.','Cleaned coin mech, recalibrated opto.','Reseated daughterboard, cleared fault.','Speaker cone torn; replaced.'];
+  const jobs=[];
+  for(let i=0;i<26;i++){
+    const cat=K[(i*5+2)%6],checks={};
+    CL[cat].forEach((c,j)=>checks[j]=(i+j)%7==0?'fail':(i+j)%9==0?'na':'pass');
+    jobs.push({id:'JOB-'+(1001+i),date:day(Math.floor(i/3)),tech:T[i%4],loc:L[(i*3+1)%4],machine:M[(i*3)%8],asset:'A'+(200+i*7),cat,checks,severity:S[(i*7)%4],status:ST[(i*3)%5],minutes:20+(i*13)%70,notes:N[i%6]});
+  }
+  return{jobs,techs:T.map((n,i)=>({id:'U'+(i+1),name:n,role:i?'Technician':'Senior Technician',email:''})),locs:L.map((n,i)=>({id:'L'+(i+1),name:n,address:'',contact:''})),machines:M.map((n,i)=>({id:'M'+(i+1),name:n,asset:'A'+(200+i*7),loc:L[i%4],type:'',serial:''}))};
+}
+function norm(d){d.jobs=d.jobs||[];d.techs=(d.techs||[]).map((x,i)=>typeof x=='string'?{id:'U'+(i+1),name:x,role:'Technician',email:''}:x);d.locs=(d.locs||[]).map((x,i)=>typeof x=='string'?{id:'L'+(i+1),name:x,address:'',contact:''}:x);d.machines=d.machines||[];return d}
+function load(){try{db=JSON.parse(localStorage.getItem('adsdb'))}catch(e){db=null}db=db&&db.jobs?norm(db):seed()}
+function save(){try{localStorage.setItem('adsdb',JSON.stringify(db))}catch(e){}}
+function toast(m){const t=$('#toast');t.textContent=m;t.style.display='block';clearTimeout(toast.t);toast.t=setTimeout(()=>t.style.display='none',3500)}
+function view(v){['dash','new','rep','reg','dat'].forEach(x=>$('#'+x).classList.toggle('hide',x!=v));document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v==v));({dash:rDash,new:rNew,rep:rRep,reg:rReg,dat:rDat})[v]()}
+document.querySelector('nav').onclick=e=>{if(e.target.dataset.v)view(e.target.dataset.v)};
+const tag=(v)=>`<span class="tag ${v}">${v}</span>`;
+function bars(map){const m=Math.max(1,...Object.values(map));return Object.entries(map).map(([k,v])=>`<div class="bar"><span>${esc(k)}</span><div><i style="width:${v/m*100}%"></i></div><b>${v}</b></div>`).join('')}
+function rDash(){
+  const J=db.jobs,open=J.filter(j=>j.status!='Resolved'),crit=open.filter(j=>j.severity=='Critical').length;
+  const avg=Math.round(J.reduce((a,j)=>a+j.minutes,0)/Math.max(1,J.length));
+  const by=f=>J.reduce((o,j)=>{const k=f(j);o[k]=(o[k]||0)+1;return o},{});
+  $('#dash').innerHTML=`<h2>Operations Overview</h2>
+  <div class="grid k">
+   <div class="card kpi"><h3>Total jobs</h3><b>${J.length}</b></div>
+   <div class="card kpi"><h3>Open faults</h3><b style="color:var(--warn)">${open.length}</b></div>
+   <div class="card kpi"><h3>Critical open</h3><b style="color:var(--bad)">${crit}</b></div>
+   <div class="card kpi"><h3>Resolved rate</h3><b style="color:var(--ok)">${Math.round((J.length-open.length)/Math.max(1,J.length)*100)}%</b></div>
+   <div class="card kpi"><h3>Avg repair (min)</h3><b>${avg}</b></div>
+  </div>
+  <div class="grid two" style="margin-top:14px">
+   <div class="card"><h3>Faults by category</h3>${bars(Object.keys(CATS).reduce((o,k)=>(o[CATS[k]]=J.filter(j=>j.cat==k).length,o),{}))}</div>
+   <div class="card"><h3>Jobs by location</h3>${bars(by(j=>j.loc))}</div>
+   <div class="card"><h3>Jobs by technician</h3>${bars(by(j=>j.tech))}</div>
+  </div>
+  <div class="card tw" style="margin-top:14px"><h3>Recent jobs</h3><table><tr><th>ID</th><th>Date</th><th>Machine</th><th>Location</th><th>Technician</th><th>Severity</th><th>Status</th></tr>
+  ${J.slice().sort((a,b)=>b.date.localeCompare(a.date)||b.id.localeCompare(a.id)).slice(0,7).map(j=>`<tr><td>${j.id}</td><td>${j.date}</td><td>${esc(j.machine)}</td><td>${esc(j.loc)}</td><td>${esc(j.tech)}</td><td>${tag(j.severity)}</td><td>${tag(j.status)}</td></tr>`).join('')}</table></div>`;
+}
+const tn=()=>db.techs.map(x=>x.name),ln=()=>db.locs.map(x=>x.name);
+const opts=(a,v)=>a.map(x=>`<option ${x==v?'selected':''}>${esc(x)}</option>`).join('');
+function rNew(){
+  cur={cat:'power',checks:{}};
+  $('#new').innerHTML=`<h2>New Diagnostic</h2><div class="card"><div class="f">
+   <div><label>Date</label><input type="date" id="fd" value="${day(0)}"></div>
+   <div><label>Technician</label><select id="ft">${opts(tn())}</select></div>
+   <div><label>Location</label><select id="fl">${opts(ln())}</select></div>
+   <div><label>Machine (register or type)</label><input id="fm" list="ml" placeholder="e.g. Pac-Man Cabinet"><datalist id="ml">${db.machines.map(m=>`<option value="${esc(m.name)}">`).join('')}</datalist></div>
+   <div><label>Asset ID</label><input id="fa" placeholder="A123"></div>
+   <div><label>Fault category</label><select id="fc">${Object.keys(CATS).map(k=>`<option value="${k}">${CATS[k]}</option>`).join('')}</select></div>
+  </div></div>
+  <div class="card" style="margin-top:14px"><h3>Fault-finding checklist</h3><div id="cl"></div></div>
+  <div class="card" style="margin-top:14px"><div class="f">
+   <div><label>Severity</label><select id="fs">${opts(['Low','Medium','High','Critical'])}</select></div>
+   <div><label>Status</label><select id="fx">${opts(['Open','Parts','Resolved'])}</select></div>
+   <div><label>Time spent (min)</label><input type="number" id="fi" value="30" min="0"></div></div>
+   <div style="margin-top:12px"><label>Notes / action taken</label><textarea id="fn" rows="3"></textarea></div>
+   <div class="row"><button class="btn" id="sv">Save diagnostic</button></div></div>`;
+  $('#fc').onchange=e=>{cur.cat=e.target.value;cur.checks={};rCL()};
+  $('#sv').onclick=saveJob;rCL();
+  $('#fm').onchange=e=>{const m=db.machines.find(x=>x.name==e.target.value);if(m){$('#fa').value=m.asset||'';if(ln().includes(m.loc))$('#fl').value=m.loc}};
+}
+function rCL(){
+  $('#cl').innerHTML=CL[cur.cat].map((c,i)=>`<div class="chk"><span>${c}</span><div class="seg" data-i="${i}">${['pass','fail','na'].map(s=>`<button data-s="${s}" class="${cur.checks[i]==s?s:''}">${s=='na'?'N/A':s[0].toUpperCase()+s.slice(1)}</button>`).join('')}</div></div>`).join('');
+  document.querySelectorAll('.seg').forEach(g=>g.onclick=e=>{if(e.target.dataset.s){cur.checks[g.dataset.i]=e.target.dataset.s;rCL()}});
+}
+function saveJob(){
+  const m=$('#fm').value.trim();
+  if(!m){toast('Please enter the machine name');$('#fm').focus();return}
+  const n=Math.max(1000,...db.jobs.map(j=>+j.id.split('-')[1]||0))+1;
+  db.jobs.push({id:'JOB-'+n,date:$('#fd').value,tech:$('#ft').value,loc:$('#fl').value,machine:m,asset:$('#fa').value.trim(),cat:cur.cat,checks:cur.checks,severity:$('#fs').value,status:$('#fx').value,minutes:+$('#fi').value||0,notes:$('#fn').value.trim()});
+  save();toast('Diagnostic JOB-'+n+' saved');view('rep');
+}
+function filt(){
+  const a=$('#rf')?$('#rf').value:'',b=$('#rt')?$('#rt').value:'',t=$('#rtech')?$('#rtech').value:'All',l=$('#rloc')?$('#rloc').value:'All';
+  return db.jobs.filter(j=>(!a||j.date>=a)&&(!b||j.date<=b)&&(t=='All'||j.tech==t)&&(l=='All'||j.loc==l)).sort((x,y)=>y.date.localeCompare(x.date)||y.id.localeCompare(x.id));
+}
+function rRep(){
+  const keep=$('#rf')?{f:$('#rf').value,t:$('#rt').value,te:$('#rtech').value,l:$('#rloc').value}:{f:'',t:'',te:'All',l:'All'};
+  $('#rep').innerHTML=`<h2>Reports &amp; Delivery</h2>
+  <div class="card"><h3>Filter</h3><div class="f">
+   <div><label>Date from</label><input type="date" id="rf" value="${keep.f}"></div>
+   <div><label>Date to</label><input type="date" id="rt" value="${keep.t}"></div>
+   <div><label>Technician</label><select id="rtech">${opts(['All',...tn()],keep.te)}</select></div>
+   <div><label>Location</label><select id="rloc">${opts(['All',...ln()],keep.l)}</select></div></div>
+   <div class="row"><button class="btn s" id="today">Today only</button><button class="btn s" id="clr">Clear filters</button></div></div>
+  <div class="card" style="margin-top:14px"><h3>Delivery method</h3>
+   <div class="mode"><button class="btn" id="mp">Print</button><button class="btn s" id="me">Email</button></div>
+   <div id="eb" class="hide" style="margin-top:12px"><label>Recipient email(s), comma separated</label><input id="to" type="email" multiple placeholder="manager@company.com"></div>
+   <div class="row"><button class="btn" id="go">Print selected (0)</button><button class="btn s" id="cp">Copy text</button><button class="btn s" id="csv">Download CSV</button><button class="btn s" id="del" style="color:var(--bad)">Delete selected</button></div></div>
+  <div class="card tw" style="margin-top:14px"><table id="tb"></table></div>`;
+  ['rf','rt','rtech','rloc'].forEach(i=>$('#'+i).onchange=()=>{sel.clear();rTab()});
+  $('#today').onclick=()=>{$('#rf').value=$('#rt').value=day(0);sel.clear();rTab()};
+  $('#clr').onclick=()=>{$('#rf').value=$('#rt').value='';$('#rtech').value=$('#rloc').value='All';sel.clear();rTab()};
+  cur.mode='print';
+  $('#mp').onclick=()=>setMode('print');$('#me').onclick=()=>setMode('email');
+  $('#go').onclick=deliver;$('#cp').onclick=()=>{const t=pick().map(rt).join('\n\n----------\n\n');if(!t)return toast('Select at least one report');navigator.clipboard.writeText(t).then(()=>toast('Report text copied'),()=>toast('Copy not available here'))};
+  $('#csv').onclick=dl;
+  $('#del').onclick=()=>{const P=pick();if(!P.length)return toast('Select at least one report');const b=$('#del');if(!b.dataset.arm){b.dataset.arm=1;b.textContent='Confirm delete ('+P.length+')';clearTimeout(b.t);b.t=setTimeout(()=>{b.dataset.arm='';b.textContent='Delete selected'},4000);return}const ids=new Set(P.map(j=>j.id));db.jobs=db.jobs.filter(j=>!ids.has(j.id));ids.forEach(i=>sel.delete(i));save();b.dataset.arm='';b.textContent='Delete selected';rTab();toast(ids.size+' report(s) deleted')};
+  rTab();
+}
+function setMode(m){cur.mode=m;$('#mp').className='btn'+(m=='print'?'':' s');$('#me').className='btn'+(m=='email'?'':' s');$('#eb').classList.toggle('hide',m!='email');cnt()}
+function cnt(){$('#go').textContent=(cur.mode=='email'?'Send by email':'Print selected')+' ('+sel.size+')'}
+function rTab(){
+  const L=filt();
+  $('#tb').innerHTML=`<tr><th><input type="checkbox" id="all" style="width:auto"></th><th>ID</th><th>Date</th><th>Machine</th><th>Location</th><th>Technician</th><th>Category</th><th>Severity</th><th>Status</th></tr>`+
+  (L.length?L.map(j=>`<tr><td><input type="checkbox" class="rc" data-id="${j.id}" style="width:auto" ${sel.has(j.id)?'checked':''}></td><td>${j.id}</td><td>${j.date}</td><td>${esc(j.machine)}</td><td>${esc(j.loc)}</td><td>${esc(j.tech)}</td><td>${CATS[j.cat]}</td><td>${tag(j.severity)}</td><td>${tag(j.status)}</td></tr>`).join(''):'<tr><td colspan="9">No reports match these filters.</td></tr>');
+  $('#all').onchange=e=>{L.forEach(j=>e.target.checked?sel.add(j.id):sel.delete(j.id));rTab()};
+  document.querySelectorAll('.rc').forEach(c=>c.onchange=()=>{c.checked?sel.add(c.dataset.id):sel.delete(c.dataset.id);cnt()});
+  cnt();
+}
+function pick(){const v=new Set(filt().map(j=>j.id));return db.jobs.filter(j=>sel.has(j.id)&&v.has(j.id))}
+function rt(j){
+  const c=CL[j.cat].map((x,i)=>'  ['+({pass:'PASS',fail:'FAIL',na:'N/A '}[j.checks[i]]||'----')+'] '+x).join('\n');
+  return `DIAGNOSTIC REPORT ${j.id}\nDate: ${j.date}\nLocation: ${j.loc}\nTechnician: ${j.tech}\nMachine: ${j.machine} (${j.asset||'no asset ID'})\nCategory: ${CATS[j.cat]}\nSeverity: ${j.severity} | Status: ${j.status} | Time: ${j.minutes} min\nChecklist:\n${c}\nNotes: ${j.notes||'-'}`;
+}
+function sheet(j){
+  return `<div class="sheet"><h1>Diagnostic Report ${j.id}</h1><table><tr><th>Date</th><td>${j.date}</td><th>Location</th><td>${esc(j.loc)}</td></tr><tr><th>Technician</th><td>${esc(j.tech)}</td><th>Machine</th><td>${esc(j.machine)} (${esc(j.asset||'-')})</td></tr><tr><th>Category</th><td>${CATS[j.cat]}</td><th>Severity / Status</th><td>${j.severity} / ${j.status}</td></tr></table><h3 style="color:#333">Checklist</h3><table>${CL[j.cat].map((x,i)=>`<tr><td>${x}</td><td><b>${({pass:'PASS',fail:'FAIL',na:'N/A'}[j.checks[i]])||'-'}</b></td></tr>`).join('')}</table><p><b>Notes:</b> ${esc(j.notes||'-')}</p><p style="font-size:11px;color:#555">Time spent: ${j.minutes} min</p></div>`;
+}
+function deliver(){
+  const P=pick();if(!P.length)return toast('Select at least one report');
+  if(cur.mode=='print'){$('#pa').innerHTML=P.map(sheet).join('');window.print();return}
+  const to=$('#to').value.trim();
+  let body=P.map(rt).join('\n\n----------\n\n');
+  const sub='Arcade Diagnostic Reports ('+P.length+')';
+  if(encodeURIComponent(body).length>1800){
+    try{navigator.clipboard.writeText(body)}catch(e){}
+    body='Summary of '+P.length+' reports (full text copied to clipboard — paste below or attach the CSV):\n\n'+P.map(j=>`${j.id} | ${j.date} | ${j.loc} | ${j.tech} | ${j.machine} | ${j.severity} | ${j.status}`).join('\n');
+    toast('Long email: summary used, full text copied');
+  }
+  location.href='mailto:'+encodeURIComponent(to).replace(/%2C/g,',').replace(/%40/g,'@')+'?subject='+encodeURIComponent(sub)+'&body='+encodeURIComponent(body);
+}
+function dl(){
+  const P=pick();if(!P.length)return toast('Select at least one report');
+  const q=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
+  const rows=[['ID','Date','Location','Technician','Machine','Asset','Category','Severity','Status','Minutes','Notes']].concat(P.map(j=>[j.id,j.date,j.loc,j.tech,j.machine,j.asset,CATS[j.cat],j.severity,j.status,j.minutes,j.notes]));
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([rows.map(r=>r.map(q).join(',')).join('\n')],{type:'text/csv'}));a.download='diagnostic-reports.csv';a.click();
+}
+const REG={mach:{t:'Machines',k:'machines',p:'M',f:[['name','Machine name'],['asset','Asset ID'],['loc','Location','loc'],['type','Type'],['serial','Serial no.']]},loc:{t:'Locations',k:'locs',p:'L',f:[['name','Location name'],['address','Address'],['contact','Contact']]},user:{t:'Users',k:'techs',p:'U',f:[['name','Full name'],['role','Role','role'],['email','Email']]}};
+let rtab='mach',edit=null;
+function rReg(){
+ const R=REG[rtab],L=db[R.k],e=edit?L.find(x=>x.id==edit):null;
+ const inp=f=>{const c=f[2]=='loc'?`<select id='g_${f[0]}'>${opts(ln())}</select>`:f[2]=='role'?`<select id='g_${f[0]}'>${opts(['Technician','Senior Technician','Manager','Admin'])}</select>`:`<input id='g_${f[0]}'>`;return `<div><label>${f[1]}</label>${c}</div>`};
+ $('#reg').innerHTML=`<h2>Registers</h2><div class='mode' style='margin-bottom:14px'>${Object.keys(REG).map(k=>`<button class='btn${k==rtab?'':' s'}' data-t='${k}'>${REG[k].t}</button>`).join('')}</div><div class='card'><h3>${e?'Edit entry':'Add new'} · ${R.t}</h3><div class='f'>${R.f.map(inp).join('')}</div><div class='row'><button class='btn' id='rs'>${e?'Update':'Add'}</button>${e?`<button class='btn s' id='rc'>Cancel</button>`:''}</div></div><div class='card tw' style='margin-top:14px'><h3>${R.t} (${L.length})</h3><table><tr>${R.f.map(f=>`<th>${f[1]}</th>`).join('')}<th></th></tr>${L.length?L.map(x=>`<tr>${R.f.map(f=>`<td>${esc(x[f[0]])}</td>`).join('')}<td><button class='btn s' data-e='${x.id}'>Edit</button> <button class='btn s' data-d='${x.id}'>Delete</button></td></tr>`).join(''):`<tr><td colspan='6'>No entries yet.</td></tr>`}</table></div>`;
+ R.f.forEach(f=>{$('#g_'+f[0]).value=e?e[f[0]]||'':''});
+ document.querySelectorAll('#reg [data-t]').forEach(b=>b.onclick=()=>{rtab=b.dataset.t;edit=null;rReg()});
+ document.querySelectorAll('#reg [data-e]').forEach(b=>b.onclick=()=>{edit=b.dataset.e;rReg();scrollTo(0,0)});
+ document.querySelectorAll('#reg [data-d]').forEach(b=>b.onclick=()=>{if(!b.dataset.arm){b.dataset.arm=1;b.textContent='Confirm?';return}db[R.k]=db[R.k].filter(x=>x.id!=b.dataset.d);save();edit=null;rReg();toast('Entry deleted')});
+ if($('#rc'))$('#rc').onclick=()=>{edit=null;rReg()};
+ $('#rs').onclick=()=>{
+  const v={};R.f.forEach(f=>v[f[0]]=$('#g_'+f[0]).value.trim());
+  if(!v.name)return toast('Name is required');
+  if(rtab!='mach'&&L.some(x=>x.name==v.name&&(!e||x.id!=e.id)))return toast('That name already exists');
+  if(e){
+   if(rtab=='loc'&&e.name!=v.name){db.jobs.forEach(j=>{if(j.loc==e.name)j.loc=v.name});db.machines.forEach(m=>{if(m.loc==e.name)m.loc=v.name})}
+   if(rtab=='user'&&e.name!=v.name)db.jobs.forEach(j=>{if(j.tech==e.name)j.tech=v.name});
+   Object.assign(e,v);
+  }else{v.id=R.p+(Math.max(0,...L.map(x=>parseInt(String(x.id).slice(1))||0))+1);L.push(v)}
+  save();edit=null;rReg();toast('Saved');
+ };
+}
+function rDat(){
+ const txt=JSON.stringify({app:'arcade-diagnostic-system',version:1,exported:new Date().toISOString(),jobs:db.jobs,techs:db.techs,locs:db.locs,machines:db.machines},null,1);
+ $('#dat').innerHTML=`<h2>Data · Export and Import</h2><div class='grid two'><div class='card'><h3>Export</h3><p style='color:var(--mut)'>${db.jobs.length} jobs · ${db.machines.length} machines · ${db.locs.length} locations · ${db.techs.length} users</p><textarea id='xt' rows='6' readonly style='font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px'></textarea><div class='row'><button class='btn' id='dj'>Download JSON</button><button class='btn s' id='cj'>Copy JSON</button></div><p style='color:var(--mut);font-size:12px'>If downloads are blocked in a browser preview, use Copy JSON.</p></div><div class='card'><h3>Import</h3><label>JSON file</label><input type='file' id='im' accept='.json,application/json'><label style='margin-top:10px'>…or paste JSON</label><textarea id='ip' rows='3'></textarea><label style='margin-top:10px'>Mode</label><select id='imm'><option value='merge'>Merge (add new, update matching IDs)</option><option value='replace'>Replace all existing data</option></select><div class='row'><button class='btn' id='ib'>Import</button></div></div></div><div class='card' style='margin-top:14px'><h3>Demo</h3><button class='btn s' id='rst'>Restore demo data</button></div>`;
+ $('#xt').value=txt;
+ $('#cj').onclick=()=>navigator.clipboard.writeText(txt).then(()=>toast('JSON copied'),()=>{$('#xt').select();toast('Select and copy the text')});
+ $('#dj').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type:'application/json'}));a.download='arcade-diagnostic-data-'+day(0)+'.json';a.click()};
+ $('#ib').onclick=()=>{const f=$('#im').files[0];if(f){const r=new FileReader();r.onload=()=>doImport(r.result);r.onerror=()=>toast('Could not read file');r.readAsText(f)}else if($('#ip').value.trim())doImport($('#ip').value);else toast('Choose a file or paste JSON first')};
+ $('#rst').onclick=()=>{if(!$('#rst').dataset.arm){$('#rst').dataset.arm=1;$('#rst').textContent='Confirm: replaces all data';return}db=seed();save();sel.clear();rDat();toast('Demo data restored')};
+}
+function doImport(txt){
+ let d;try{d=JSON.parse(txt)}catch(e){return toast('That is not valid JSON')}
+ if(!d||typeof d!='object'||!['jobs','techs','locs','machines'].some(k=>Array.isArray(d[k])))return toast('No diagnostic data found');
+ d=norm(d);
+ const id=x=>String(x).replace(/[^A-Za-z0-9_-]/g,''),S=['Low','Medium','High','Critical'],ST=['Open','Parts','Resolved'];
+ ['techs','locs','machines'].forEach(k=>{d[k]=d[k].filter(x=>x&&x.id&&x.name).map(x=>{x.id=id(x.id);return x})});
+ d.jobs=d.jobs.filter(j=>j&&j.id&&Object.keys(CL).includes(j.cat)&&/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(j.date)).map(j=>{j.id=id(j.id);j.severity=S.includes(j.severity)?j.severity:'Medium';j.status=ST.includes(j.status)?j.status:'Open';j.minutes=+j.minutes||0;j.checks=j.checks&&typeof j.checks=='object'?j.checks:{};return j});
+ const n=d.jobs.length+d.techs.length+d.locs.length+d.machines.length;
+ if($('#imm').value=='replace')db=d;
+ else ['jobs','techs','locs','machines'].forEach(k=>d[k].forEach(x=>{const i=db[k].findIndex(y=>y.id==x.id);if(i<0)db[k].push(x);else db[k][i]=x}));
+ sel.clear();save();rDat();toast('Imported '+n+' records');
+}
+load();rDash();
+</script>
+</body>
+</html>
