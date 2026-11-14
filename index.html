@@ -61,6 +61,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--acc)}
     <button data-v="dash" class="on">Dashboard</button>
     <button data-v="new">New Diagnostic</button>
     <button data-v="rep">Reports</button>
+    <button data-v="ooo">Out of Order</button>
     <button data-v="reg">Registers</button>
     <button data-v="dat">Data</button>
   </nav>
@@ -69,6 +70,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--acc)}
   <section id="dash"></section>
   <section id="new" class="hide"></section>
   <section id="rep" class="hide"></section>
+  <section id="ooo" class="hide"></section>
   <section id="reg" class="hide"></section>
   <section id="dat" class="hide"></section>
 </main>
@@ -106,7 +108,7 @@ function norm(d){d.jobs=d.jobs||[];d.techs=(d.techs||[]).map((x,i)=>typeof x=='s
 function load(){try{db=JSON.parse(localStorage.getItem('adsdb'))}catch(e){db=null}db=db&&db.jobs?norm(db):seed()}
 function save(){try{localStorage.setItem('adsdb',JSON.stringify(db))}catch(e){}}
 function toast(m){const t=$('#toast');t.textContent=m;t.style.display='block';clearTimeout(toast.t);toast.t=setTimeout(()=>t.style.display='none',3500)}
-function view(v){['dash','new','rep','reg','dat'].forEach(x=>$('#'+x).classList.toggle('hide',x!=v));document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v==v));({dash:rDash,new:rNew,rep:rRep,reg:rReg,dat:rDat})[v]()}
+function view(v){['dash','new','rep','reg','dat','ooo'].forEach(x=>$('#'+x).classList.toggle('hide',x!=v));document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v==v));({dash:rDash,new:rNew,rep:rRep,reg:rReg,dat:rDat,ooo:rOoo})[v]()}
 document.querySelector('nav').onclick=e=>{if(e.target.dataset.v)view(e.target.dataset.v)};
 const tag=(v)=>`<span class="tag ${v}">${v}</span>`;
 function bars(map){const m=Math.max(1,...Object.values(map));return Object.entries(map).map(([k,v])=>`<div class="bar"><span>${esc(k)}</span><div><i style="width:${v/m*100}%"></i></div><b>${v}</b></div>`).join('')}
@@ -120,6 +122,7 @@ function rDash(){
    <div class="card kpi"><h3>Open faults</h3><b style="color:var(--warn)">${open.length}</b></div>
    <div class="card kpi"><h3>Critical open</h3><b style="color:var(--bad)">${crit}</b></div>
    <div class="card kpi"><h3>Resolved rate</h3><b style="color:var(--ok)">${Math.round((J.length-open.length)/Math.max(1,J.length)*100)}%</b></div>
+   <div class="card kpi"><h3>Machines OOO</h3><b style="color:var(--bad)">${db.machines.filter(m=>m.ooo).length}</b></div>
    <div class="card kpi"><h3>Avg repair (min)</h3><b>${avg}</b></div>
   </div>
   <div class="grid two" style="margin-top:14px">
@@ -162,6 +165,7 @@ function saveJob(){
   if(!m){toast('Please enter the machine name');$('#fm').focus();return}
   const n=Math.max(1000,...db.jobs.map(j=>+j.id.split('-')[1]||0))+1;
   db.jobs.push({id:'JOB-'+n,date:$('#fd').value,tech:$('#ft').value,loc:$('#fl').value,machine:m,asset:$('#fa').value.trim(),cat:cur.cat,checks:cur.checks,severity:$('#fs').value,status:$('#fx').value,minutes:+$('#fi').value||0,notes:$('#fn').value.trim()});
+  const mm=db.machines.find(x=>x.name==m&&x.loc==$('#fl').value);if(mm){const o=$('#fx').value!='Resolved';mm.ooo=o;mm.oooSince=o?(mm.oooSince||$('#fd').value):'';mm.oooNote=o?(mm.oooNote||$('#fs').value+' · '+CATS[cur.cat]):''}
   save();toast('Diagnostic JOB-'+n+' saved');view('rep');
 }
 function filt(){
@@ -310,8 +314,9 @@ function xlsxFor(s){
  const J=s.jobs,f=J[0];
  return fillXlsx(x=>{
   x=put(x,'G1','Venue: '+f.loc+'  (Tech: '+f.tech+')');x=put(x,'L1','Date: '+f.date);
-  J.forEach((j,i)=>{x=put(x,'B'+(2+i),j.machine)});
-  J.filter(j=>j.status!='Resolved').forEach((j,i)=>{x=put(x,'B'+(17+i),j.machine)});
+  const oo=db.machines.filter(m=>m.ooo&&m.loc==f.loc).map(m=>m.name),u=a=>a.filter((v,i)=>a.indexOf(v)==i);
+  u(J.map(j=>j.machine).concat(oo)).slice(0,14).forEach((n,i)=>{x=put(x,'B'+(2+i),n)});
+  u(J.filter(j=>j.status!='Resolved').map(j=>j.machine).concat(oo.filter(n=>!J.some(j=>j.machine==n&&j.status=='Resolved')))).slice(0,6).forEach((n,i)=>{x=put(x,'B'+(17+i),n)});
   J.forEach((j,k)=>{const r=25+5*k;
    x=put(x,'A'+r,j.machine+(j.asset?' ('+j.asset+')':''));
    x=put(x,'C'+r,CATS[j.cat]+' ('+j.severity+')');
@@ -327,6 +332,18 @@ async function dlForms(P){
    a.download=('Tech_Visit_'+f.loc+'_'+f.date+'_'+f.tech+(s.total>1?'_'+s.part:'')).replace(/[^A-Za-z0-9_-]+/g,'_')+'.xlsx';
    document.body.appendChild(a);a.click();a.remove();await new Promise(r=>setTimeout(r,400))}
   toast(S.length+' visit form(s) generated')}catch(e){toast('Could not build the Excel form in this browser')}
+}
+let ol='';
+function rOoo(){
+ if(!ln().includes(ol))ol=ln()[0]||'';
+ const M=db.machines.filter(m=>m.loc==ol),cnt=n=>db.machines.filter(m=>m.loc==n&&m.ooo).length;
+ $('#ooo').innerHTML=`<h2>Machines Out of Order</h2><div class='card'><div class='f'><div><label>Location</label><select id='ol'>${opts(ln(),ol)}</select></div></div><p style='color:var(--mut)'>${ln().map(n=>`${esc(n)}: <b style='color:${cnt(n)?'var(--bad)':'var(--ok)'}'>${cnt(n)}</b>`).join(' &nbsp;·&nbsp; ')}</p></div><div class='card tw' style='margin-top:14px'><h3>${esc(ol)} · ${cnt(ol)} of ${M.length} out of order</h3><table><tr><th>Machine</th><th>Asset</th><th>Status</th><th>Since</th><th>Fault / note</th><th></th></tr>${M.length?M.map(m=>`<tr><td>${esc(m.name)}</td><td>${esc(m.asset)}</td><td><select data-s='${m.id}'><option>Working</option><option>Out of order</option></select></td><td><input type='date' data-d='${m.id}' style='width:auto'></td><td><input data-n='${m.id}' placeholder='Fault / reason'></td><td><button class='btn' data-u='${m.id}'>Update</button></td></tr>`).join(''):`<tr><td colspan='6'>No machines registered at this location. Add them in Registers.</td></tr>`}</table></div>`;
+ const q=(s,id)=>document.querySelector(`#ooo [data-${s}='${id}']`);
+ M.forEach(m=>{q('s',m.id).value=m.ooo?'Out of order':'Working';q('d',m.id).value=m.oooSince||'';q('n',m.id).value=m.oooNote||''});
+ $('#ol').onchange=e=>{ol=e.target.value;rOoo()};
+ document.querySelectorAll('#ooo [data-u]').forEach(b=>b.onclick=()=>{const id=b.dataset.u,m=db.machines.find(x=>x.id==id);
+  m.ooo=q('s',id).value=='Out of order';m.oooSince=m.ooo?(q('d',id).value||day(0)):'';m.oooNote=m.ooo?q('n',id).value.trim():'';
+  save();rOoo();toast(m.name+(m.ooo?' marked out of order':' marked working'))});
 }
 load();rDash();
 </script>
