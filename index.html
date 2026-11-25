@@ -49,12 +49,14 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--acc)}
 #toast{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);background:var(--acc);color:#04201d;padding:10px 18px;border-radius:8px;font-weight:600;display:none;z-index:9;max-width:90%}
 .hide{display:none}
 #pa{display:none}
+.locked header,.locked main{display:none}
+#auth{padding:0 16px}
 .sheet{color:#000;background:#fff;padding:20px;border:1px solid #999;margin-bottom:16px;page-break-inside:avoid;font-family:Arial,sans-serif}
 .sheet h1{font-size:18px;margin:0 0 8px}.sheet td,.sheet th{color:#000;border-bottom:1px solid #ccc;white-space:normal}
 @media print{body>*{display:none!important}#pa{display:block!important}.sheet{border:0}}
 </style>
 </head>
-<body>
+<body class="locked">
 <header>
   <div class="logo"><i></i>ARCADE DIAGNOSTIC SYSTEM <small>v1.0 · OFFLINE</small></div>
   <nav>
@@ -64,6 +66,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--acc)}
     <button data-v="ooo">Out of Order</button>
     <button data-v="reg">Registers</button>
     <button data-v="dat">Data</button>
+    <span id="me" style="color:var(--mut);align-self:center;margin:0 6px 0 12px;font-size:12px"></span><button id="lo">Log out</button>
   </nav>
 </header>
 <main>
@@ -74,6 +77,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--acc)}
   <section id="reg" class="hide"></section>
   <section id="dat" class="hide"></section>
 </main>
+<div id="auth"></div>
 <div id="pa"></div>
 <div id="toast"></div>
 <script>
@@ -345,7 +349,46 @@ function rOoo(){
   m.ooo=q('s',id).value=='Out of order';m.oooSince=m.ooo?(q('d',id).value||day(0)):'';m.oooNote=m.ooo?q('n',id).value.trim():'';
   save();rOoo();toast(m.name+(m.ooo?' marked out of order':' marked working'))});
 }
-load();rDash();
+function boot(){load();rDash()}
+const AK='adsusers',SK='adssess';
+const getU=()=>{try{return JSON.parse(localStorage.getItem(AK))||[]}catch(e){return[]}};
+const putU=a=>{try{localStorage.setItem(AK,JSON.stringify(a))}catch(e){}};
+async function hp(pw,salt){
+ if(window.crypto&&crypto.subtle){const k=await crypto.subtle.importKey('raw',new TextEncoder().encode(pw),'PBKDF2',false,['deriveBits']);const b=await crypto.subtle.deriveBits({name:'PBKDF2',salt:new TextEncoder().encode(salt),iterations:120000,hash:'SHA-256'},k,256);return Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,'0')).join('')}
+ let h=2166136261;const s=salt+pw;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return 'f'+(h>>>0).toString(16);
+}
+let amode='in',fails=0,lockUntil=0;
+function enter(u){document.body.classList.remove('locked');$('#auth').innerHTML='';$('#me').textContent=u.name+' · '+u.role;boot();view('dash')}
+function login(u){try{sessionStorage.setItem(SK,u.email)}catch(e){}enter(u)}
+function rAuth(){
+ document.body.classList.add('locked');
+ const up=amode=='up',first=!getU().length;
+ $('#auth').innerHTML=`<div class='card' style='max-width:380px;margin:12vh auto 0'><div class='logo' style='margin-bottom:14px'><i></i>ARCADE DIAGNOSTIC SYSTEM</div><div class='mode' style='margin-bottom:14px'><button class='btn${up?' s':''}' id='ti'>Log in</button><button class='btn${up?'':' s'}' id='tu'>Sign up</button></div>${up?`<label>Full name</label><input id='an' autocomplete='name'>`:''}<label style='margin-top:10px'>Email</label><input id='ae' type='email' autocomplete='username'><label style='margin-top:10px'>Password</label><input id='ap' type='password' autocomplete='${up?'new-password':'current-password'}'>${up?`<label style='margin-top:10px'>Confirm password</label><input id='ac' type='password' autocomplete='new-password'>`:''}<p id='ax' style='color:var(--bad);min-height:18px;margin:10px 0'></p><button class='btn' id='ag' style='width:100%'>${up?'Create account':'Log in'}</button>${up&&first?`<p style='color:var(--mut);font-size:12px'>The first account created becomes the Admin.</p>`:''}</div>`;
+ $('#ti').onclick=()=>{amode='in';rAuth()};$('#tu').onclick=()=>{amode='up';rAuth()};
+ $('#auth').onkeydown=e=>{if(e.key=='Enter')$('#ag').click()};
+ const err=m=>{$('#ax').textContent=m};
+ $('#ag').onclick=async()=>{
+  const em=$('#ae').value.trim().toLowerCase(),pw=$('#ap').value,U=getU();
+  if(!em.includes('@')||!em.includes('.')||em.includes(' '))return err('Enter a valid email address');
+  if(up){
+   const nm=$('#an').value.trim();
+   if(!nm)return err('Enter your name');
+   if(pw.length<8)return err('Password must be at least 8 characters');
+   if(pw!=$('#ac').value)return err('Passwords do not match');
+   if(U.some(u=>u.email==em))return err('An account with that email already exists');
+   const salt=Array.from(crypto.getRandomValues(new Uint8Array(12))).join('-');
+   const u={email:em,name:nm,role:U.length?'Technician':'Admin',salt,hash:await hp(pw,salt)};
+   U.push(u);putU(U);login(u);
+  }else{
+   if(Date.now()<lockUntil)return err('Too many attempts. Wait '+Math.ceil((lockUntil-Date.now())/1000)+'s');
+   const u=U.find(x=>x.email==em);
+   if(!u||await hp(pw,u.salt)!=u.hash){if(++fails>=5){fails=0;lockUntil=Date.now()+30000}return err('Incorrect email or password')}
+   fails=0;login(u);
+  }
+ };
+}
+$('#lo').onclick=()=>{try{sessionStorage.removeItem(SK)}catch(e){}db=null;sel.clear();['dash','new','rep','reg','dat','ooo'].forEach(x=>{$('#'+x).innerHTML=''});amode='in';rAuth()};
+(function(){let e='';try{e=sessionStorage.getItem(SK)}catch(x){}const u=getU().find(x=>x.email==e);u?enter(u):rAuth()})();
 </script>
 </body>
 </html>
