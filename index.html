@@ -53,6 +53,18 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--acc)}
 #auth{padding:0 16px}
 .sheet{color:#000;background:#fff;padding:20px;border:1px solid #999;margin-bottom:16px;page-break-inside:avoid;font-family:Arial,sans-serif}
 .sheet h1{font-size:18px;margin:0 0 8px}.sheet td,.sheet th{color:#000;border-bottom:1px solid #ccc;white-space:normal}
+@media(max-width:720px){
+header{position:static;padding:10px 12px;gap:8px}
+nav{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;width:100%;margin-left:0}
+nav button{padding:10px 4px;font-size:13px;border-color:var(--line);text-align:center}
+#me{grid-column:span 2;margin:0!important;align-self:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+main{padding:12px}
+input,select,textarea{font-size:16px}
+.chk{grid-template-columns:1fr}
+.row>div{flex:1 1 160px}
+.row .btn{flex:1 1 auto}
+.card{padding:12px}
+}
 @media print{body>*{display:none!important}#pa{display:block!important}.sheet{border:0}}
 </style>
 </head>
